@@ -1,0 +1,30 @@
+Starting Nmap 7.80 ( https://nmap.org ) at 2021-09-08 15:59 CEST
+Nmap scan report for static-90-139-102-193.tele2.se (90.139.102.193)
+Host is up (0.0043s latency).
+Not shown: 998 filtered ports
+PORT    STATE SERVICE
+80/tcp  open  http
+443/tcp open  https
+
+Nmap scan report for static-90-139-102-194.tele2.se (90.139.102.194)
+Host is up (0.0040s latency).
+Not shown: 998 filtered ports
+PORT    STATE SERVICE
+80/tcp  open  http
+443/tcp open  https
+
+Nmap scan report for static-90-139-102-195.tele2.se (90.139.102.195)
+Host is up (0.0040s latency).
+Not shown: 998 filtered ports
+PORT    STATE SERVICE
+80/tcp  open  http
+443/tcp open  https
+
+Nmap scan report for static-90-139-102-196.tele2.se (90.139.102.196)
+Host is up (0.0041s latency).
+Not shown: 998 filtered ports
+PORT    STATE SERVICE
+80/tcp  open  http
+443/tcp open  https
+
+Nmap done: 4 IP addresses (4 hosts up) scanned in 10.01 seconds
