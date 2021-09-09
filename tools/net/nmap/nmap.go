@@ -228,6 +228,7 @@ func ParseScanPortsOutput(r io.Reader) (ScanResult, error) {
 }
 
 func RunScanPortsCmd(targets TargetSpec) (io.Reader, error) {
+	fmt.Println("scanning")
 	return nil, nil
 }
 
