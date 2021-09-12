@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os/exec"
 	"time"
 	"strconv"
 	"strings"
@@ -229,10 +230,16 @@ func ParseScanPortsOutput(r io.Reader) (ScanResult, error) {
 
 func RunScanPortsCmd(targets TargetSpec) (io.Reader, error) {
 	fmt.Println("scanning - me")
-	return nil, nil
+	cmd := exec.Command("nmap", string(targets))
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		gopherrs.WrapUnknown(err, "StdoutPipe() failed")
+	}
+
+	return stdout, cmd.Run()
 }
 
-func ScanPorts(targets TargetSpec) (ScanResult, error) {
+func ScanPorts(targets TargetSpec) (ScanResult, error) {	
 	r, err := RunScanPortsCmd(targets)
 	if err != nil {
 		return ScanResult{}, err

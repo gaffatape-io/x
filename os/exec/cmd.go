@@ -1,58 +1,28 @@
-package execx
+package exec
 
 import (
-	"context"
-	"io"
-	"os/exec"
-
-	"github.com/gaffatape-io/gopherrs"
+	. "os/exec"
 )
 
-type Cmd interface {
-	// Runs the command and returns a reader for stdout.
-	Run() (io.Reader, error)
+// Using external commands always look the same:
+// - create command
+// - execute command
+// - check error
+// - iff error == nil => extract information from stdout
+// - else => extract information from stderr
+//
+// When wrapping a binary/command as a function I want to test the individual
+// pieces but I don't want to write the start/run/wait dispatching code.
+//
+func Dispatch(cmd *Cmd, success func(c *Cmd) error, failure func(err error, status int, c *Cmd) error) error {
+	err := cmd.Run()
+	if err == nil && success != nil {
+		err = success(cmd)
+	}
 
-	// Returns the io.Reader for Stderr; can only be called once Run have completed.
-	Stderr() (io.Reader, error)
-}
-
-type cmd struct {
-	*exec.Cmd
-	stderr io.Reader
-}
-
-func (c *cmd) Run() (io.Reader, error) {
-	if c.stderr != nil {
-		return nil, gopherrs.FailedPrecondition("Run() alread called")
+	if err != nil && failure != nil {
+		err = failure(err, cmd.ProcessState.ExitCode(), cmd)
 	}
 	
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		return nil, gopherrs.WrapFailedPrecondition(err, "StdoutPipe() failed")
-	}
-
-	c.stderr, err = c.StderrPipe()
-	if err != nil {
-		return nil, gopherrs.WrapFailedPrecondition(err, "StderrPipe() failed")
-	}
-
-	err = c.Cmd.Run()
-	if err != nil {	
-	}
-	
-	return stdout, err
+	return err
 }
-
-func (c *cmd) Stderr() (io.Reader, error) {
-	if c.stderr == nil {
-		return nil, gopherrs.FailedPrecondition("Run() not called")
-	}
-
-	return c.stderr, nil
-}
-
-func Command(ctx context.Context, name string, arg ...string) Cmd {
-	c := &cmd{exec.CommandContext(ctx, name, arg...), nil}
-	return c
-}
-

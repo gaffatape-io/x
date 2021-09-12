@@ -1,2 +1,6 @@
 github.com/gaffatape-io/gopherrs v0.0.3 h1:/5/pzJw2zQZE2eYUJO+SBbmCU/1i8Q6rNrBkdj7P96Q=
 github.com/gaffatape-io/gopherrs v0.0.3/go.mod h1:YrzyeuR6PIQNReWgbPsQDGd+Kqa+mAJa8TSgPJvtzNQ=
+github.com/gaffatape-io/rubberduck v0.0.0-20210906205228-213dbf4568b4 h1:bfazTLMDn3xyLrljtBDWPxmDmVJZFIr3VR/4ciqZW1c=
+github.com/gaffatape-io/rubberduck v0.0.0-20210906205228-213dbf4568b4/go.mod h1:5nYTDaNwMsgexRKHXZw9bE0IZkMufru0ilS3wT5PD4U=
+github.com/gaffatape-io/rubberduck/testing v0.0.0-20210911140543-6fe99ca4bfdd h1:c8H2hR9V0Ew8ELe8fqx6FzvWe1ruE3FHz0GPHxi0NNk=
+github.com/gaffatape-io/rubberduck/testing v0.0.0-20210911140543-6fe99ca4bfdd/go.mod h1:dAO/Jrj6rLibdyoKHr/0jyFYe7DHGIavFX5rOuzoNJs=
