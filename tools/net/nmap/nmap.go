@@ -2,6 +2,7 @@ package nmap
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os/exec"
@@ -207,10 +208,10 @@ func scanDuration(s *bufio.Scanner, r *ScanResult) error {
 	return nil
 }
 
-// Parses the result of a port scan operation into a ScanResult.
-func ParseScanPortsOutput(r io.Reader) (ScanResult, error) {
+func parseScanPortsOutput(r io.Reader) (ScanResult, error) {
 	res := ScanResult{}
-	scanner := bufio.NewScanner(r)
+	log := &bytes.Buffer{}
+	scanner := bufio.NewScanner(io.TeeReader(r, log))
 
 	ops := []func(*bufio.Scanner, *ScanResult) error {
 		scanStartedAt,
@@ -221,6 +222,8 @@ func ParseScanPortsOutput(r io.Reader) (ScanResult, error) {
 	for _, op := range ops {
 		err := op(scanner, &res)
 		if err != nil {
+			// TODO(dape): replace with some proper logging
+			fmt.Println("parsed:", log.String())
 			return ScanResult{}, err
 		}
 	}
@@ -228,22 +231,34 @@ func ParseScanPortsOutput(r io.Reader) (ScanResult, error) {
 	return res, nil
 }
 
-func RunScanPortsCmd(targets TargetSpec) (io.Reader, error) {
-	fmt.Println("scanning - me")
-	cmd := exec.Command("nmap", string(targets))
+func ScanPorts(targets TargetSpec, is6 bool) (ScanResult, error) {
+	args := []string{string(targets)}
+	if is6 {
+		args = append(args, "-6")
+	}
+	cmd := exec.Command("nmap", args...)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		gopherrs.WrapUnknown(err, "StdoutPipe() failed")
+		return ScanResult{}, gopherrs.WrapUnknown(err, "StdoutPipe() failed")
 	}
 
-	return stdout, cmd.Run()
-}
-
-func ScanPorts(targets TargetSpec) (ScanResult, error) {	
-	r, err := RunScanPortsCmd(targets)
+	err = cmd.Start()
+	if err != nil {
+		return ScanResult{}, gopherrs.WrapUnknown(err, "Start() failed")
+	}
+	
+	result, err := parseScanPortsOutput(stdout)
 	if err != nil {
 		return ScanResult{}, err
 	}
-	
-	return ParseScanPortsOutput(r)
+
+	// If we got here then the parser finished; most likely the command should
+	// also have finished successfully but we add a check here to be safe.
+	err = cmd.Wait()
+	if err != nil {
+		return ScanResult{}, gopherrs.WrapUnknown(err, "Wait() failed")
+	}
+
+	return result, err
 }

@@ -85,7 +85,7 @@ func TestParseScanPortsOutput(t *testing.T) {
 		}
 		defer input.Close()
 
-		res, err := ParseScanPortsOutput(io.TeeReader(input, b))
+		res, err := parseScanPortsOutput(io.TeeReader(input, b))
 		t.Log("tee:ed input:\n", b)
 		if err != nil {
 			t.Fatal(err)
@@ -96,5 +96,39 @@ func TestParseScanPortsOutput(t *testing.T) {
 		if !reflect.DeepEqual(res, tc.result) {
 			t.Fatal(tc.result)
 		}
+	}
+}
+
+type scanPortsTest struct {
+	target      string
+	is6         bool
+	reportCount int
+}
+
+var (
+	scanPortsTests = []scanPortsTest {
+		{"localhost", false, 1},
+		{"::1", true, 1},
+		{"malformed\\..\t.host", false, 0},
+		{"malformed\\..\t.host", true, 0},
+	}
+)
+
+func checkScanPortsResult(t *testing.T, res ScanResult, err error, tc scanPortsTest) {
+	t.Log(res)
+	if err != nil {
+		t.Error(err)
+	}
+	
+	if len(res.Reports) != tc.reportCount {
+		t.Errorf("wrong # of reports in result; reportCount:%v", len(res.Reports))
+	}
+}
+
+func TestScanPorts(t *testing.T) {
+	for _, tc := range scanPortsTests {
+		t.Logf("--- test case: %+v", tc)
+		res, err := ScanPorts(TargetSpec(tc.target), tc.is6)
+		checkScanPortsResult(t, res, err, tc)
 	}
 }
