@@ -1,3 +1,5 @@
+//go:generate protoc --go_out=../../../../../.. nmap.proto
+
 package nmap
 
 import (
@@ -11,28 +13,12 @@ import (
 	"strings"
 
 	"github.com/gaffatape-io/gopherrs"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // TargetSpec type matches the nmap {target specification} format.
 type TargetSpec string
-
-type PortReport struct {
-	Port     string
-	State    string
-	Service  string
-}
-
-type ScanReport struct {
-	ID    string
-	ID2   string
-	Ports []PortReport
-}
-
-type ScanResult struct {
-	StartedAt time.Time
-	Duration  time.Duration
-	Reports   map[string]ScanReport
-}
 
 func scanLine(s *bufio.Scanner) (string, bool) {
 	if !s.Scan() {
@@ -54,7 +40,7 @@ func scanStartedAt(s *bufio.Scanner, r *ScanResult) error {
 	}
 
 	startedAt, err := time.Parse("2006-01-02 15:04 MST", l[at+3:])
-	r.StartedAt = startedAt
+	r.StartedAt = timestamppb.New(startedAt)
 	return err
 }
 
@@ -66,8 +52,8 @@ func splitHostIDs(l string) (string, string) {
 	return id, id2
 }
 
-func scanReportLine(l string) (PortReport, error) {
-	report := PortReport{}
+func scanReportLine(l string) (*PortReport, error) {
+	report := &PortReport{}
 	parts := strings.Split(l, " ")
 	at := 0
 	for _, p := range parts {
@@ -90,11 +76,11 @@ func scanReportLine(l string) (PortReport, error) {
 		}
 	}
 
-	return PortReport{}, gopherrs.InvalidArgumentf("malformed port line; %q", l)
+	return nil, gopherrs.InvalidArgumentf("malformed port line; %q", l)
 }
 
-func scanPorts(s *bufio.Scanner) ([]PortReport, error) {
-	ports := []PortReport{}
+func scanPorts(s *bufio.Scanner) ([]*PortReport, error) {
+	ports := []*PortReport{}
 
 	// skip all lines until we find the PORT/STATE/SERVICE table header
 	for {
@@ -167,7 +153,7 @@ func scanReports(s *bufio.Scanner, r *ScanResult) error {
 		if strings.HasPrefix(l, "Nmap scan report for") {
 			id, id2 := splitHostIDs(l)
 		
-			report := ScanReport{id, id2, nil}
+			report := &ScanReport{Id: id, Id2: id2}
 			var err error
 			report.Ports, err = scanPorts(s)
 			if err != nil {
@@ -175,7 +161,7 @@ func scanReports(s *bufio.Scanner, r *ScanResult) error {
 			}
 
 			if r.Reports == nil {
-				r.Reports = map[string]ScanReport{}
+				r.Reports = map[string]*ScanReport{}
 			}
 		
 			r.Reports[id] = report
@@ -196,7 +182,7 @@ func scanReports(s *bufio.Scanner, r *ScanResult) error {
 			if err != nil {
 				return err
 			}
-			r.Duration = duration
+			r.Duration = durationpb.New(duration)
 			return nil
 		} else {
 			return gopherrs.InvalidArgumentf("unexpected input: %q", l)
@@ -208,8 +194,8 @@ func scanDuration(s *bufio.Scanner, r *ScanResult) error {
 	return nil
 }
 
-func parseScanPortsOutput(r io.Reader) (ScanResult, error) {
-	res := ScanResult{}
+func parseScanPortsOutput(r io.Reader) (*ScanResult, error) {
+	res := &ScanResult{}
 	log := &bytes.Buffer{}
 	scanner := bufio.NewScanner(io.TeeReader(r, log))
 
@@ -220,18 +206,18 @@ func parseScanPortsOutput(r io.Reader) (ScanResult, error) {
 	}
 
 	for _, op := range ops {
-		err := op(scanner, &res)
+		err := op(scanner, res)
 		if err != nil {
 			// TODO(dape): replace with some proper logging
 			fmt.Println("parsed:", log.String())
-			return ScanResult{}, err
+			return nil, err
 		}
 	}
 
 	return res, nil
 }
 
-func ScanPorts(targets TargetSpec, is6 bool) (ScanResult, error) {
+func ScanPorts(targets TargetSpec, is6 bool) (*ScanResult, error) {
 	args := []string{string(targets)}
 	if is6 {
 		args = append(args, "-6")
@@ -240,24 +226,24 @@ func ScanPorts(targets TargetSpec, is6 bool) (ScanResult, error) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return ScanResult{}, gopherrs.WrapUnknown(err, "StdoutPipe() failed")
+		return nil, gopherrs.WrapUnknown(err, "StdoutPipe() failed")
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		return ScanResult{}, gopherrs.WrapUnknown(err, "Start() failed")
+		return nil, gopherrs.WrapUnknown(err, "Start() failed")
 	}
 	
 	result, err := parseScanPortsOutput(stdout)
 	if err != nil {
-		return ScanResult{}, err
+		return nil, err
 	}
 
 	// If we got here then the parser finished; most likely the command should
 	// also have finished successfully but we add a check here to be safe.
 	err = cmd.Wait()
 	if err != nil {
-		return ScanResult{}, gopherrs.WrapUnknown(err, "Wait() failed")
+		return nil, gopherrs.WrapUnknown(err, "Wait() failed")
 	}
 
 	return result, err

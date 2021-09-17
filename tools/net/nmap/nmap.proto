@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/gaffatape-io/x/tools/net/nmap";
+
+message PortReport {
+  string port = 1;
+  string state = 2;
+  string service = 3;
+}
+
+message ScanReport {
+  string id = 1;
+  string id2 = 2;
+  repeated PortReport ports = 3;
+}
+
+message ScanResult {
+  google.protobuf.Timestamp started_at = 1;
+  google.protobuf.Duration duration = 2;
+  map<string, ScanReport> reports = 3;
+}
